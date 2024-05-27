@@ -17,8 +17,8 @@ Train Your Model: Let LazyML handle the heavy lifting of model training and eval
 Deploy and Export: Export your trained model and integrate it into your own applications or use it for further analysis.
 
 ## Detailed Features
-Null value handling- [drop NA],[Simple Imputer],[KNN Imputer],[Iter Imputer]
-Categorical value encoder - [Onehotencoding],[OrdinalEncoding],[LabelEncoding]
-Model Selection - [Regression],[Classification]
-evaluation metrics Selection - [RMSE,MAE,MSE,RMSLE,R2_score,F1_score,accuracy]
+Null value handling- [drop NA],[Simple Imputer],[KNN Imputer],[Iter Imputer].
+Categorical value encoder - [Onehotencoding],[OrdinalEncoding],[LabelEncoding].
+Model Selection - [Regression],[Classification].
+evaluation metrics Selection - [RMSE,MAE,MSE,RMSLE,R2_score,F1_score,accuracy].
 Test prediction and submission
