@@ -1,6 +1,8 @@
 # LazyML-App
 LazyML is a powerful and intuitive application designed to simplify machine learning operations and model training. With LazyML, you can harness the power of machine learning,  LazyML offers an accessible and efficient solution.
 
+Click to go on App-> [LazyML](https://huggingface.co/spaces/Gaurav069/LazyML)
+
 ## Key Features and Future Scope
 No Coding Required: Train and deploy machine learning models using a user-friendly interface.
 
@@ -33,8 +35,8 @@ Deploy and Export: Export your trained model and integrate it into your own appl
 4. evaluation metrics Selection - [RMSE,MAE,MSE,RMSLE,R2_score,F1_score,accuracy].
 5. Test prediction and submission
 
-### Features remaining
-1. outlier handling
+### Features remaining 
+1. outlier handling 
 2. feature selection
 3. feature engineering
 4. EDA using graphs
