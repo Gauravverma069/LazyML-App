@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split as tts
 import evaluationer,models, null_value_handling
-
+import auto_optimizer
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import SimpleImputer, IterativeImputer
 # st.set_page_config(layout="wide")
@@ -70,8 +70,8 @@ st.markdown(html_code, unsafe_allow_html=True)
 
 
 # file uploader 
-csv_upload = st.file_uploader("Input CSV File for ML modelling", type=['csv'])
-csv_upload2 = st.file_uploader("Input CSV File of Test Data Prediction",type = ["csv"])
+csv_upload = st.sidebar.file_uploader("Input CSV File for ML modelling", type=['csv'])
+csv_upload2 = st.sidebar.file_uploader("Input CSV File of Test Data Prediction",type = ["csv"])
 test = pd.DataFrame()
 if csv_upload is not None:
     # read the uploaded file into dataframe
@@ -95,11 +95,13 @@ if csv_upload is not None:
         test.to_csv('csv_upload_test.csv', index=False)
         st.write("Test File uploaded successfully. ✅")
     
-    if st.radio("Display Train Data",["Yes","No"],index = 1) == "Yes":
+    display_train_data = st.radio("Display Train Data",["Yes","No"],index = 1)
+    if  display_train_data == "Yes":
         st.dataframe(df.head())
 
     if len(test) >0:
-        if st.radio("Display Test Data",["Yes","No"],index = 1) == "Yes":
+        display_test_data = st.radio("Display Test Data",["Yes","No"],index = 1)
+        if display_test_data == "Yes":
             st.dataframe(test.head())
 
     
@@ -122,12 +124,52 @@ if csv_upload is not None:
                 
         if st.radio("Display Target Column",["Yes","No"],index =1) == "Yes":
                 st.dataframe(y.head())
+
+
+        select_target_trans = st.radio("Target column Transformation",["Yes","No"],index = 1)
+        if  select_target_trans == "Yes":
+            selected_transformation = st.selectbox("Select Transformation method",["Log Transformation","Power Transformation"])
+            if selected_transformation == "Log Transformation":
+                if y.min() <=0:
+                    st.write("Values in target columns are zeroes or negative, please select power transformation")
+                else:    
+                    log_selected_transformation = st.selectbox("Select Logarithmic method",["Natural Log base(e)","Log base 10","Log base (2)"])
+                    if log_selected_transformation == "Natural Log base(e)":
+                        y = np.log(y)
+                        st.write("Log base (e) Transformation Completed ✅")
+                    elif log_selected_transformation == "Log base 10":
+                        y = np.log10(y)
+                        st.write("Log base 10 Transformation Completed ✅")
+                    elif log_selected_transformation == "Log base (2)":
+                        y = np.log2(y)
+                        st.write("Log base 2 Transformation Completed ✅")
+            elif selected_transformation == "Power Transformation":
+                power_selected_transformation = st.selectbox("Select Power Transformation method",["Square Root","Other"])
+                if power_selected_transformation == "Square Root":
+                    y = np.sqrt(y)
+                    st.write("Square root Transformation Completed ✅")
+                elif power_selected_transformation == "Other":
+                    power_value = st.number_input("Enter Power Value",value=3)
+                    y = y**(1/power_value)
+                    st.write(f"power root of {power_value} Transformation Completed ✅")       
         
+            if st.radio("Display Target Column after Transformation",["Yes","No"],index =1) == "Yes":
+                st.dataframe(y.head())
+# inverse of transformation
+
         X = df.drop(columns = selected_column)
 
         if st.radio("Display X-Train Data",["Yes","No"],index =1) == "Yes":
             st.dataframe(X.head())
-
+        if st.radio("Check for duplicate Values",["Yes","No"],index = 1) == "Yes":    
+            len_duplicates = len(X[X.duplicated()])
+            if len_duplicates >0:
+                st.write(f"There are {len_duplicates} duplicate values in Train")
+                if st.selectbox("Drop Duplicate values",["Yes","No"],index = 1) == "Yes":
+                    X = X.drop_duplicates()
+                    st.write("Duplicate values removed ✅")
+            else:
+                st.write("There are no duplicate values in Train")
         # dropping not important columns
         if st.radio("Drop Un-Important Column(s)",["Yes","No"],index = 1) == "Yes":
             selected_drop_column = st.multiselect('Select columns to be dropped', X.columns)
@@ -142,8 +184,25 @@ if csv_upload is not None:
         st.write("Numerical Columns in Train Data: ", tuple(num_cols))
         st.write("Categorical Columns in Train Data: ", tuple(cat_cols))
 
-        if st.radio("Select method for ML modelling", ["Manual","Auto Optimized"],index = 0) == "Manual":
+        if st.radio("Select method for ML modelling", ["Manual","Auto Optimized"],index = 0) == "Auto Optimized":
+            ml_cat_ao = st.radio("Select Machine Learning Category",["Regression","Classification"],index =0)
 
+            if ml_cat_ao =="Regression":
+                eva = "reg"
+                st.write("Select ML algorithm")
+                reg_model_name = st.selectbox("select model",models.Regression_models.index)  
+                reg_model = models.Regression_models.loc[reg_model_name].values[0]
+                auto_optimizer.Auto_optimizer(X,y,eva,reg_model)
+
+            elif ml_cat_ao =="Classification":
+                eva = "class"
+                st.write("Select ML algorithm")
+                class_model_name = st.selectbox("select model",models.Classification_models.index)
+                class_model = models.Classification_models.loc[class_model_name].values[0]
+                auto_optimizer.Auto_optimizer(X,y,eva,class_model)
+           
+
+        else:
             if X.isnull().sum().sum() >0 :
                 st.write("⚠️⚠️⚠️ There are missing values in Train Data ⚠️⚠️⚠️")
 
@@ -177,7 +236,7 @@ if csv_upload is not None:
                 if len(test) >0:
                     if test[num_cols].isnull().sum().sum() >0:    
                         test_num_cols_nvh = test[num_cols].isnull().sum()[test[num_cols].isnull().sum()>0].index
-                        st.write("sdgs",test_num_cols_nvh)
+                        st.write("Columns with Null Value in Test",test_num_cols_nvh)
                         test[num_cols] = IterativeImputer(max_iter = 200,random_state= 42).fit_transform(test[num_cols])
                 
 
@@ -358,7 +417,24 @@ if csv_upload is not None:
                             a = st.number_input("select index of best algorithm for test prediction",min_value = 0,max_value =len(evaluationer.reg_evaluation_df) -1, value = len(evaluationer.reg_evaluation_df) -1)
                             
                             test_prediction = evaluationer.reg_evaluation_df.loc[a,"model"].predict(test)
-                            
+                            if  select_target_trans == "Yes":
+                                if selected_transformation == "Log Transformation":
+                                    if log_selected_transformation == "Natural Log base(e)":
+                                        test_prediction = np.exp(test_prediction)
+                                        st.write("Natural Log base(e) Inverse Transformation Completed ✅")
+                                    elif log_selected_transformation == "Log base 10":
+                                        test_prediction = np.power(10,test_prediction)
+                                        st.write("Log base 10 Inverse Transformation Completed ✅")
+                                    elif log_selected_transformation == "Log base (2)":
+                                        test_prediction = np.power(2,test_prediction)
+                                        st.write("Log base 2 Inverse Transformation Completed ✅")
+                                elif selected_transformation == "Power Transformation":
+                                    if power_selected_transformation == "Square Root":
+                                        test_prediction = np.power(test_prediction,2)
+                                        st.write("Square root Inverse Transformation Completed ✅")
+                                    elif power_selected_transformation == "Other":
+                                        test_prediction = test_prediction**(power_value)
+                                        st.write(f"power root of {power_value} Inverse Transformation Completed ✅")
                             submission_file = pd.DataFrame(index = [submission_id],data = test_prediction,columns = [selected_column])
                             st.write("Sample of Prediction File",submission_file.head())
                             csv_prediction = submission_file.to_csv()
@@ -428,8 +504,26 @@ if csv_upload is not None:
                         if len(evaluationer.classification_evaluation_df) >0:
                             a = st.number_input("select index of best algorithm for test prediction",min_value = 0,max_value =len(evaluationer.classification_evaluation_df) -1, value = len(evaluationer.classification_evaluation_df) -1)
                             
-                            test_prediction = evaluationer.classification_evaluation_df.loc[a,"model"].predict(test)
-                            
+                            test_prediction = evaluationer.classification_evaluation_df.loc[a,"model"].predict(test)    
+                            if  select_target_trans == "Yes":
+                                if selected_transformation == "Log Transformation":
+                                    if log_selected_transformation == "Natural Log base(e)":
+                                        test_prediction = np.exp(test_prediction)
+                                        st.write("Natural Log base(e) Inverse Transformation Completed ✅")
+                                    elif log_selected_transformation == "Log base 10":
+                                        test_prediction = np.power(10,test_prediction)
+                                        st.write("Log base 10 Inverse Transformation Completed ✅")
+                                    elif log_selected_transformation == "Log base (2)":
+                                        test_prediction = np.power(2,test_prediction)
+                                        st.write("Log base 2 Inverse Transformation Completed ✅")
+                                elif selected_transformation == "Power Transformation":
+                                    if power_selected_transformation == "Square Root":
+                                        test_prediction = np.power(test_prediction,2)
+                                        st.write("Square root Inverse Transformation Completed ✅")
+                                    elif power_selected_transformation == "Other":
+                                        test_prediction = test_prediction**(power_value)
+                                        st.write(f"power root of {power_value} Inverse Transformation Completed ✅")
+                          
                             submission_file = pd.DataFrame(index = [submission_id],data = test_prediction,columns = [selected_column])
                             st.write("Sample of Prediction File",submission_file.head())
                             csv_prediction = submission_file.to_csv()
@@ -437,5 +531,5 @@ if csv_upload is not None:
                                 st.download_button(label="Download Prediction CSV File",data=csv_prediction,file_name='prediction.csv',mime='text/csv')
 
 
-        else :
-            pass
+  
+

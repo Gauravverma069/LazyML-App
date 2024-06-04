@@ -85,8 +85,8 @@ def evaluation(evaluation_df_method,X_train,X_test,y_train,y_test,model,method,e
 
     elif eva == "class":
                 
-        y_pred_proba_train= model.predict_proba(X_train)
-        y_pred_proba_test= model.predict_proba(X_test)
+        # y_pred_proba_train= model.predict_proba(X_train)
+        # y_pred_proba_test= model.predict_proba(X_test)
 
         unique_classes = np.unique(y_train)
     
@@ -95,7 +95,7 @@ def evaluation(evaluation_df_method,X_train,X_test,y_train,y_test,model,method,e
             # Binary classification
             print("Using 'binary' average for binary classification.")
             average_method = 'binary'
-        else:
+        elif len(unique_classes)!=2:
             # Determine the distribution of the target column
             class_counts = np.bincount(y_train)
             
