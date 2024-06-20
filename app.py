@@ -8,6 +8,7 @@ import evaluationer,models, null_value_handling
 import auto_optimizer
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import SimpleImputer, IterativeImputer
+import eda,outliers
 # st.set_page_config(layout="wide")
 
 st.set_page_config(
@@ -21,7 +22,23 @@ st.set_page_config(
     }
 )
 
-import streamlit as st
+
+
+# Set the background image
+background_image = """
+<style>
+[data-testid="stAppViewContainer"] > .main {
+    background-image: url("https://w.wallhaven.cc/full/jx/wallhaven-jx7w25.png");
+    background-size: 100vw 100vh;  # This sets the size to cover 100% of the viewport width and height
+    background-position: center;  
+    background-repeat: no-repeat;
+}
+</style>
+"""
+
+st.markdown(background_image, unsafe_allow_html=True)
+
+
 
 # Title with Rainbow Transition Effect and Neon Glow
 html_code = """
@@ -67,23 +84,107 @@ html_code = """
 """
 
 st.markdown(html_code, unsafe_allow_html=True)
+st.divider()
 
 
+
+st.markdown(
+    """
+    <style>
+    .success-message {
+        font-family: Arial, sans-serif;
+        font-size: 24px;
+        color: green;
+        text-align: left;
+    }
+    .unsuccess-message {
+        font-family: Arial, sans-serif;
+        font-size: 24px;
+        color: red;
+        text-align: left;
+    }
+    .prompt-message {
+        font-family: Arial, sans-serif;
+        font-size: 24px;
+        color: #333;
+        text-align: center;
+    }
+    .success-message2 {
+        font-family: Arial, sans-serif;
+        font-size: 18px;
+        color: white;
+        text-align: left;
+    }
+    .message-box {
+        text-align: center;
+        background-color: white;
+        padding: 5px;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        font-size: 24px;
+        color: #333;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+
+# st.markdown('<p class="success-message">Train File uploaded successfully. ✅</p>', unsafe_allow_html=True)
 # file uploader 
 csv_upload = st.sidebar.file_uploader("Input CSV File for ML modelling", type=['csv'])
+
+sep = st.sidebar.text_input("Input Seperator")
+if (len(sep) ==0):
+    sep = ","
 csv_upload2 = st.sidebar.file_uploader("Input CSV File of Test Data Prediction",type = ["csv"])
+
+if csv_upload is None:
+    st.title("LazyML")
+
+    st.header("Welcome to LazyML – your go-to app for effortless machine learning!")
+
+    st.subheader("Overview")
+    st.write("""
+    LazyML is designed to make machine learning accessible to everyone, regardless of their technical expertise. Whether you're a seasoned data scientist or a complete beginner, LazyML takes the complexity out of building and deploying machine learning models.
+    """)
+
+    st.subheader("Key Features")
+    st.write("""
+    - **Automated Model Building:** Automatically preprocess your data, select the best algorithms, and fine-tune models with minimal effort.
+    - **User-Friendly Interface:** Intuitive and easy-to-navigate interface that guides you through the entire machine learning workflow.
+    - **Data Visualization:** Comprehensive visualization tools to help you understand your data and model performance.
+    - **Customizable Pipelines:** Flexibility to customize data preprocessing, feature engineering, and model selection to suit your needs.
+    - **Performance Metrics:** Detailed performance metrics and comparison reports for informed decision-making.
+    - **Deployment Ready:** Easily deploy your models and start making predictions with just a few clicks.
+    """)
+
+    st.subheader("How It Works")
+    st.write("""
+    1. **Upload Your Data:** Start by uploading your dataset in CSV format.
+    2. **Data Preprocessing:** LazyML automatically cleans and preprocesses your data, handling missing values, and scaling features as needed.
+    3. **Model Selection:** The app evaluates multiple algorithms and selects the best performing ones for your specific data.
+    4. **Model Training:** Selected models are trained and fine-tuned using cross-validation to ensure robustness.
+    5. **Evaluation:** Get detailed reports on model performance with key metrics like accuracy, precision, recall, and F1 score.
+    6. **Deployment:** Once satisfied with the model, deploy it and start making real-time predictions.
+    """)
+
+
 test = pd.DataFrame()
 if csv_upload is not None:
     # read the uploaded file into dataframe
-    df = pd.read_csv(csv_upload)
+    df = pd.read_csv(csv_upload,sep = sep)
 
     # saving the dataframe to a CSV file
     df.to_csv('csv_upload.csv', index=False)
-    st.write("Train File uploaded successfully. ✅")
-
+    st.markdown('<p class="success-message">Train File uploaded successfully. ✅</p>', unsafe_allow_html=True)
+    
     if csv_upload2 is not None:
-        test = pd.read_csv(csv_upload2)
-        id_col = st.selectbox("select column for submission i.e, ID",test.columns)
+        test = pd.read_csv(csv_upload2,sep = sep)
+        st.markdown('<p class="success-message">Test File uploaded successfully. ✅</p>', unsafe_allow_html=True)
+        st.divider()
+        id_col = st.selectbox("Select Column for Submission i.e, ID",test.columns)
+        st.divider()
         submission_id = test[id_col]
         # st.write("Train File upl",submission_id)
 
@@ -93,8 +194,10 @@ if csv_upload is not None:
     if len(test) >0:
         # saving the test dataframe to a CSV file
         test.to_csv('csv_upload_test.csv', index=False)
-        st.write("Test File uploaded successfully. ✅")
+        
     
+    st.markdown('<p class="message-box">Display Data</p>', unsafe_allow_html=True)
+    st.write("")
     display_train_data = st.radio("Display Train Data",["Yes","No"],index = 1)
     if  display_train_data == "Yes":
         st.dataframe(df.head())
@@ -104,29 +207,40 @@ if csv_upload is not None:
         if display_test_data == "Yes":
             st.dataframe(test.head())
 
-    
-    if st.radio("Select Supervision Category",["Supervised","Un-Supervised"],index =0) == "Supervised":
-        
-        selected_column = st.selectbox('Select Target column', df.columns, index=(len(df.columns)-1))
+    st.divider()
+    st.markdown('<div class="message-box success">Select Supervision Category</div>', unsafe_allow_html=True)
+    if st.radio("",["Supervised","Un-Supervised"],index =0) == "Supervised":
+        st.divider()
+
+        st.write('<p class="success-message2">Select Target column</p>', unsafe_allow_html=True)
+        selected_column = st.selectbox('', df.columns, index=(len(df.columns)-1))
         
         # Display the selected column
         st.write('You selected:', selected_column)
-        
+        st.divider()
+
+        st.markdown('<div class="message-box success ">Perform EDA</div>', unsafe_allow_html=True)
+        st.write("")
+        if st.checkbox("Proceed to perform EDA"):
+            eda.eda_analysis(df)
+            st.write('<p class="success-message">EDA Performed proceed for Pre-processing</p>', unsafe_allow_html=True)
+        st.divider()
         y = df[selected_column]
         
         if y.dtype == "O":
-            st.write("⚠️⚠️⚠️ Target Column is Object Type ⚠️⚠️⚠️")
-            if st.radio("Proceed for Label Encoding ",["Yes","No"],index = 1) == "Yes": 
+            st.markdown('<p class="unsuccess-message">⚠️⚠️⚠️ Target Column is Object Type ⚠️⚠️⚠️</p>', unsafe_allow_html=True)
+            
+            if st.checkbox("Proceed for Label Encoding "): 
                 from sklearn.preprocessing import LabelEncoder
                 le = LabelEncoder()
                 y= pd.Series(le.fit_transform(y))
-                st.write("Label Encoding Completed ✅")
-                
-        if st.radio("Display Target Column",["Yes","No"],index =1) == "Yes":
+                st.markdown('<p class="success-message">Label Encoding Completed ✅</p>', unsafe_allow_html=True)
+        if st.checkbox("Display Target Column"):
                 st.dataframe(y.head())
 
-
-        select_target_trans = st.radio("Target column Transformation",["Yes","No"],index = 1)
+        st.divider()
+        st.markdown('<div class="message-box success">Target column Transformation</div>', unsafe_allow_html=True)
+        select_target_trans = st.radio("",["Yes","No"],index = 1)
         if  select_target_trans == "Yes":
             selected_transformation = st.selectbox("Select Transformation method",["Log Transformation","Power Transformation"])
             if selected_transformation == "Log Transformation":
@@ -155,36 +269,53 @@ if csv_upload is not None:
         
             if st.radio("Display Target Column after Transformation",["Yes","No"],index =1) == "Yes":
                 st.dataframe(y.head())
-# inverse of transformation
+
+
 
         X = df.drop(columns = selected_column)
 
         if st.radio("Display X-Train Data",["Yes","No"],index =1) == "Yes":
             st.dataframe(X.head())
-        if st.radio("Check for duplicate Values",["Yes","No"],index = 1) == "Yes":    
+        st.divider()
+
+        # st.checkbox()     
+        st.markdown('<div class="message-box success">Check for duplicate Values</div>', unsafe_allow_html=True)
+        if st.radio("  ",["Yes","No"],index = 1) == "Yes":    
             len_duplicates = len(X[X.duplicated()])
             if len_duplicates >0:
                 st.write(f"There are {len_duplicates} duplicate values in Train")
+                if st.checkbox("Show Duplicate values"):
+                    st.dataframe(X[X.duplicated()])
                 if st.selectbox("Drop Duplicate values",["Yes","No"],index = 1) == "Yes":
                     X = X.drop_duplicates()
                     st.write("Duplicate values removed ✅")
             else:
                 st.write("There are no duplicate values in Train")
+        st.divider()        
         # dropping not important columns
-        if st.radio("Drop Un-Important Column(s)",["Yes","No"],index = 1) == "Yes":
-            selected_drop_column = st.multiselect('Select columns to be dropped', X.columns)
-            X = X.drop(columns = selected_drop_column)
-            if len(test) >0:
-                test = test.drop(columns = selected_drop_column)
-            st.write("Un-Important column(s) Delected ✅")
-            st.dataframe(X.head())
+        if len(X.columns) >1:
+            st.markdown('<div class="message-box success">Drop Unimportant Columns</div>', unsafe_allow_html=True)
+            if st.radio("   ",["Yes","No"],index = 1) == "Yes":
+                selected_drop_column = st.multiselect('Select columns to be dropped', X.columns)
+                X = X.drop(columns = selected_drop_column)
+                if len(test) >0:
+                    test = test.drop(columns = selected_drop_column)
+                st.write("Un-Important column(s) Deleted ✅")
+                st.dataframe(X.head())
 
+        st.divider()
         num_cols = X.select_dtypes(exclude = "O").columns 
         cat_cols = X.select_dtypes(include = "O").columns
         st.write("Numerical Columns in Train Data: ", tuple(num_cols))
         st.write("Categorical Columns in Train Data: ", tuple(cat_cols))
-
-        if st.radio("Select method for ML modelling", ["Manual","Auto Optimized"],index = 0) == "Auto Optimized":
+        if st.sidebar.button("Clear Evaluation DataFrame"):
+            evaluationer.reg_evaluation_df = evaluationer.reg_evaluation_df.drop(index =evaluationer.reg_evaluation_df.index)
+            evaluationer.classification_evaluation_df = evaluationer.classification_evaluation_df.drop(index =evaluationer.reg_evaluation_df.index)
+        st.divider()   
+        # markdown
+        st.markdown('<div class="message-box success">Select method for ML modelling</div>', unsafe_allow_html = True)
+        if st.radio("     ", ["Manual","Auto Optimized"],index = 0) == "Auto Optimized":
+            st.divider()
             ml_cat_ao = st.radio("Select Machine Learning Category",["Regression","Classification"],index =0)
 
             if ml_cat_ao =="Regression":
@@ -192,19 +323,21 @@ if csv_upload is not None:
                 st.write("Select ML algorithm")
                 reg_model_name = st.selectbox("select model",models.Regression_models.index)  
                 reg_model = models.Regression_models.loc[reg_model_name].values[0]
-                auto_optimizer.Auto_optimizer(X,y,eva,reg_model)
+                auto_optimizer.Auto_optimizer(X,y,eva,reg_model,reg_model_name)
 
             elif ml_cat_ao =="Classification":
                 eva = "class"
                 st.write("Select ML algorithm")
                 class_model_name = st.selectbox("select model",models.Classification_models.index)
                 class_model = models.Classification_models.loc[class_model_name].values[0]
-                auto_optimizer.Auto_optimizer(X,y,eva,class_model)
+                auto_optimizer.Auto_optimizer(X,y,eva,class_model,class_model_name)
            
-
+            
         else:
+            st.divider()
             if X.isnull().sum().sum() >0 :
-                st.write("⚠️⚠️⚠️ There are missing values in Train Data ⚠️⚠️⚠️")
+                
+                st.markdown('<p class="unsuccess-message">⚠️⚠️⚠️ There are missing values in Train Data ⚠️⚠️⚠️</p>', unsafe_allow_html=True)
 
                 if st.selectbox("Drop null values or Impute",["Drop Null Values","Impute Null Values"],index = 1) == "Drop Null Values":
 
@@ -241,14 +374,16 @@ if csv_upload is not None:
                 
 
                 clean_num_nvh_df_cat = pd.DataFrame()
+                
                 if X[cat_cols].isnull().sum().sum() >0:
+                    st.divider()
                     st.write("Categorical Columns with Percentage of Null Values: ")
                     cat_cols_nvh = X[cat_cols].isnull().sum()[X[cat_cols].isnull().sum()>0].index
                     st.dataframe(round(X[cat_cols].isnull().sum()[X[cat_cols].isnull().sum()>0]/len(X)*100,2))
 
                     dict_2= {}
                     for nvh_method in null_value_handling.null_value_handling_method_cat_cols :
-                        st.write("dsff",nvh_method)
+                        
                         
                         selected_nvh_num_cols = st.multiselect(f'method:- \"{nvh_method}\" for Numerical columns', cat_cols_nvh,)
                         dict_2[nvh_method] = selected_nvh_num_cols
@@ -267,36 +402,49 @@ if csv_upload is not None:
                         test[cat_cols] = SimpleImputer(strategy = "most_frequent").fit_transform(test[cat_cols])
 
                 
-                null_value_handling.null_handling(X,clean_num_nvh_df,clean_num_nvh_df_cat)
-                st.write("X Data after Null value handling", X.head())
+                try:
+                    null_value_handling.null_handling(X,clean_num_nvh_df,clean_num_nvh_df_cat)
+                    st.write("X Data after Null value handling", X.head())
 
-            new_df = pd.concat([X,y[X.index]],axis = 1)
-            
-            csv = new_df.to_csv(index = False)
-            if st.radio("Download Null Value Handled DataFrame as CSV File ? ",["Yes","No"],index = 1) == "Yes": 
-                st.download_button(label="Download Null Value Handled CSV File",data=csv,file_name='NVH_DataFrame.csv',mime='text/csv')
-
+                    new_df = pd.concat([X,y[X.index]],axis = 1)
+                    
+                    csv = new_df.to_csv(index = False)
+                    
+                    st.markdown('<p class="success-message">Null Values Handled Successfully. ✅</p>', unsafe_allow_html=True)
+                    if st.checkbox("Download Null Value Handled DataFrame as CSV File ? "): 
+                        st.download_button(label="Download Null Value Handled CSV File",data=csv,file_name='NVH_DataFrame.csv',mime='text/csv')
+                    st.divider()
+                except:
+                    st.markdown('<p class="unsuccess-message">⚠️⚠️⚠️ Categorical column null value not handled ⚠️⚠️⚠️</p>', unsafe_allow_html=True)
+                    
+                
             ord_enc_cols = []
 
             if len(cat_cols) == 0:
                 st.write("No Categorical Columns in Train")
             else:
-                st.write("Select Columns for Ordinal Encoding")
+                st.markdown('<div class="message-box success">Features Encoding</div>', unsafe_allow_html=True)
+                st.markdown('<p class="unsuccess-message">There are Object type Features in Train Data ⚠️</p>', unsafe_allow_html=True)
+                st.markdown('<p class="success-message2">Select Columns for Ordinal Encoding</p>', unsafe_allow_html=True)
+                
                 for column in cat_cols:
 
                     selected = st.checkbox(column)
                     if selected:
                         st.write(f"No. of Unique value in {column} column are", X[column].nunique())
                         ord_enc_cols.append(column)
+            st.divider()
             ohe_enc_cols = set(cat_cols) -set(ord_enc_cols)
             ohe_enc_cols = list(ohe_enc_cols)
             if len(ord_enc_cols)>0:
                 st.write("ordinal encoded columns" ,tuple(ord_enc_cols))
             if len(ohe_enc_cols)>0:
                 st.write("one hot encoded columns" ,tuple(ohe_enc_cols))
-
+            st.divider()
+            st.markdown('<div class="message-box success">Proceed for Encoding</div>', unsafe_allow_html=True)
             if len(ord_enc_cols)>0:
-                if st.radio("proceed for ordinal encoding",["Yes","No"],index = 1) == "Yes":
+                
+                if st.checkbox("Proceed for Ordinal Encoding"):
                     ordinal_order_vals = []
 
                     for column in ord_enc_cols:
@@ -317,7 +465,7 @@ if csv_upload is not None:
                     st.write("Ordinal Encoding Completed ✅")
 
             if len(ohe_enc_cols)>0:
-                if st.radio("proceed for OnehotEncoding ",["Yes","No"],index = 1) == "Yes":    # import one hot encoder
+                if st.checkbox("Proceed for OneHotEncoding "):    # import one hot encoder
                     from sklearn.preprocessing import OneHotEncoder
                     ohe = OneHotEncoder(sparse_output = False,handle_unknown = "ignore")
                     pd.options.mode.chained_assignment = None
@@ -331,39 +479,49 @@ if csv_upload is not None:
 
                     st.write("DataFrame after One Hot Encoding",X.head())
                     st.write("OneHot Encoding Completed ✅")
-            
+            st.divider()
             new_df = pd.concat([X,y],axis = 1)
             
             csv = new_df.to_csv(index = False)
-            if st.radio("Download Encoded DataFrame as CSV File ? ",["Yes","No"],index = 1) == "Yes": 
+            if st.checkbox("Download Encoded DataFrame as CSV File ? "): 
                 st.download_button(label="Download Ordinal Encoded CSV File",data=csv,file_name='Encoded_DataFrame.csv',mime='text/csv')
 
-            
-            random_state = st.number_input("Enter Random_state",max_value=100,min_value=1,value=42) 
-            test_size = st.number_input("Enter test_size",max_value=0.99, min_value = 0.01,value =0.2)      
-            if st.radio("select Train Validation Split Method",
-                        [f"Train_Test_split, Default (Random_state = {random_state},Test_size = {test_size})",
-                        "KFoldCV, Default (CV = 5)"], index = 0)== f"Train_Test_split, Default (Random_state = {random_state},Test_size = {test_size})":
+            st.divider()
+            st.markdown('<div class="message-box success">Outlier Detection</div>', unsafe_allow_html=True)
+            st.write("")
+            if st.button("Click to check outliers"):
+                outlier,out_index = outliers.detect_outliers(new_df,num_cols)
+                st.write("outlier",outlier)
+            st.divider()
+            st.markdown('<div class="message-box success">Modelling</div>', unsafe_allow_html=True)
+            st.write("")
+            st.markdown('<p class="success-message">Select Train Validation Split Method</p>', unsafe_allow_html=True)
+            if st.radio("",["Train_Test_split","KFoldCV, Default (CV = 5)"], index = 0)== "Train_Test_split":
                 ttsmethod = "Train_Test_split"
             else:
                 ttsmethod = "KFoldCV"
             st.write('You selected:', ttsmethod)
             if ttsmethod == "Train_Test_split":
+                random_state = st.number_input("Enter Random_state",max_value=100,min_value=1,value=42) 
+                test_size = st.number_input("Enter test_size",max_value=0.99, min_value = 0.01,value =0.2)  
                 X_train,X_Val,y_train,y_val = tts(X,y[X.index],random_state = random_state,test_size = test_size)
-                st.write('X-Training Data shape:', (X_train.info()))
                 
                 st.write('X-Training Data shape:', X_train.shape)
                 st.write('X-Validation Data shape:', X_Val.shape)
-
-            ml_cat = st.radio("Select Machine Learning Category",["Regression","Classification"],index =0)
-
+            st.divider()
+            st.markdown('<p class="success-message2">Select Machine Learning Category</p>', unsafe_allow_html=True)
+            ml_cat = st.radio("___",options=["Regression","Classification"],index =0)
+            st.divider()
             if ml_cat =="Regression":
-                method_name_selector = st.selectbox("Select Error Evaluation Method",evaluationer.method_df.index,index = 0)
+                st.markdown('<p class="success-message2">Select Error Evaluation Method</p>', unsafe_allow_html=True)
+                method_name_selector = st.selectbox("       ",evaluationer.method_df.index,index = 0)
+
+                st.divider()
 
                 method = evaluationer.method_df.loc[method_name_selector].values[0]
                 reg_algorithm = []
                 selected_options = []
-
+                st.markdown('<div class="message-box success">Select ML Model(s)</div>', unsafe_allow_html=True)
                 for option in models.Regression_models.index:
                     selected = st.checkbox(option)
                     if selected:
@@ -450,7 +608,7 @@ if csv_upload is not None:
                 
                 cla_algorithm = []
                 selected_options = []
-
+                st.markdown('<div class="message-box success">Select ML Model(s)</div>', unsafe_allow_html=True)
                 for option in models.Classification_models.index:
                     selected = st.checkbox(option)
                     if selected:

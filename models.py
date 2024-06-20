@@ -23,6 +23,8 @@ from sklearn.neural_network import MLPRegressor
 from lightgbm import LGBMRegressor
 from sklearn.naive_bayes import GaussianNB
 
+
+
 # dictionary where keys are name of algorithm and values are algorithm for classifier
 algos_class = {
     "Logistic Regression": LogisticRegression(),

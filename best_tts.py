@@ -10,9 +10,9 @@ def best_tts(X,y,model,eva):
     if eva == "reg":
         
         test_r2_,test_r2_ts,test_r2_rs = 0,0,0
-        for k in range(10,25):
+        for k in range(10,25,3):
             i = k/100
-            for j in range(1,100):
+            for j in range(1,100,10):
                 X_train,X_test,y_train,y_test = tts(X,y[X.index],test_size = i, random_state = j,)
                 
                 model = model

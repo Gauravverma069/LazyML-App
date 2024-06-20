@@ -8,12 +8,18 @@ import pandas as pd
 import numpy as np
 import evaluationer
 import streamlit as st
-# import root_mean_squared_error
+from sklearn.feature_selection import RFE,RFECV
+from sklearn.linear_model import Lasso
+from sklearn.feature_selection import SelectKBest, chi2, mutual_info_classif
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.linear_model import LogisticRegression
+from sklearn.feature_selection import RFE, RFECV, SelectKBest, chi2, mutual_info_classif
+from sklearn.model_selection import StratifiedKFold
+from sklearn.metrics import f1_score
 from sklearn.metrics import root_mean_squared_error
 def feature_selection(X_train, X_test,y_train,y_test,model_reg,alpha = 0.05):
-   
-    st.write("dvsdv",y_train)
-    st.write("dvfssdv",X_train)
 
     model = sm.OLS(y_train, sm.add_constant(X_train))
     model_fit = model.fit()
@@ -42,10 +48,10 @@ def feature_selection(X_train, X_test,y_train,y_test,model_reg,alpha = 0.05):
     vif = pd.DataFrame()
     vif["variables"] = X_new_vif.columns
     vif["VIF"] = [variance_inflation_factor(X_new_vif.values, i) for i in range(X_new_vif.shape[1])]
-    st.write("gdfgdsdsdfad",vif)
+    # st.write("gdfgdsdsdfad",vif)
     if len(vif[vif["variables"] == "const"]) == 1:
         vif = vif.drop(index = (vif[vif["variables"] == "const"].index[0]))
-    st.write("gdfgdsad",vif)
+    # st.write("gdfgdsad",vif)
     # drop const in vif cols
     # vif_cols = X_new_vif.drop(columns = "const")
     vif_cols = vif[vif.VIF >10].variables.tolist()
@@ -100,5 +106,52 @@ def feature_selection(X_train, X_test,y_train,y_test,model_reg,alpha = 0.05):
     feature_cols_name = ["pval_cols","coef_cols","pval_and_coef_cols","mi_cols","corr_u_cols","corr_l_cols","vif_cols","lasso_cols"]
     st.write("feature_cols", vif_cols)
     for i,j in enumerate(feature_cols):
-        evaluationer.evaluation(f"{feature_cols_name[i]} dropped" ,X_train.drop(columns = j),X_test.drop(columns = j),y_train,y_test,model_reg,method = root_mean_squared_error,eva = "reg")
-    return evaluationer.reg_evaluation_df
+        evaluationer.evaluation(f"{feature_cols_name[i]}" ,X_train.drop(columns = j),X_test.drop(columns = j),y_train,y_test,model_reg,method = root_mean_squared_error,eva = "reg")
+    return evaluationer.reg_evaluation_df,feature_cols,feature_cols_name
+
+def clas_feature_selection(X_train, X_test,y_train,y_test,model,n_features_to_select = None, step=1,importance_getter='auto',refcv_graph= False,C=0.05,k = 10):
+    global rfe_cols,rfecv_cols,lasso_cols,chi2_imp_col,mi_imp_col
+    rfe = RFE(estimator= model,n_features_to_select = n_features_to_select,importance_getter=importance_getter, step=1)
+    rfe.fit(X_train,y_train)
+    rfe_cols = X_train.columns[rfe.support_]
+    cv = StratifiedKFold(5)
+    rfecv = RFECV(estimator=model,
+        step=1,
+        cv=cv,
+        scoring="f1",
+        min_features_to_select=1,
+        n_jobs=-1)
+    rfecv.fit(X_train,y_train)
+    rfecv_cols = X_train.columns[rfecv.support_]
+    if refcv_graph == True:
+        n_scores = len(rfecv.cv_results_["mean_test_score"])
+        plt.figure()
+        plt.xlabel("Number of features selected")
+        plt.ylabel("Mean test f1")
+        plt.errorbar(range(min_features_to_select, n_scores + min_features_to_select),
+            rfecv.cv_results_["mean_test_score"],
+            yerr=rfecv.cv_results_["std_test_score"],
+        )
+        plt.grid(True)
+        plt.title("Recursive Feature Elimination \nwith correlated features")
+        plt.show()
+    clf = LogisticRegression(penalty = "l1", C = C,
+                         random_state = 42,
+                         solver = "liblinear")
+    clf.fit(X_train, y_train)
+    lasso_cols = clf.feature_names_in_[clf.coef_[0] != 0]
+    
+    sk = SelectKBest(chi2, k=k)
+    X_chi2 = sk.fit_transform(X_train, y_train)
+    chi2_imp_col = X_train.columns[sk.get_support()]
+    sk = SelectKBest(mutual_info_classif, k=k)
+    X_mutual = sk.fit_transform(X_train, y_train)
+    mi_imp_col = X_train.columns[sk.get_support()]
+
+    feature_cols = [rfe_cols,rfecv_cols,lasso_cols,chi2_imp_col,mi_imp_col]
+    feature_cols_name = ["rfe_cols","rfecv_cols","lasso_cols","chi2_imp_col","mi_imp_col"]
+    
+    for i,j in enumerate(feature_cols):
+        # evaluationerevaluation(f"{feature_cols_name[i]} " ,X_train[j],X_test[j],y_train,y_test,model = model,eva = "class")
+        evaluationer.evaluation(f"{feature_cols_name[i]}" ,X_train[j],X_test[j],y_train,y_test,model,method = root_mean_squared_error,eva = "class")
+    return evaluationer.classification_evaluation_df  ,  feature_cols,    feature_cols_name
