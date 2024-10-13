@@ -3,6 +3,9 @@ LazyML is a powerful and intuitive application designed to simplify machine lear
 
 Click to go on App-> [LazyML](https://huggingface.co/spaces/Gaurav069/LazyML)
 
+Process Flow Diagram
+![Blank board](https://github.com/user-attachments/assets/3c06dea8-e012-4f7f-a2f5-d179f1c1dcce)
+
 ## Key Features and Future Scope
 No Coding Required: Train and deploy machine learning models using a user-friendly interface.
 
